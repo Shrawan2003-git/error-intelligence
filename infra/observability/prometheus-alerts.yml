@@ -1,0 +1,60 @@
+groups:
+  - name: error-intelligence-platform
+    rules:
+      - alert: ApiServerErrorRateHigh
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 0.000001)
+          > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API server error rate is above 5 percent
+          description: More than 5 percent of requests have returned 5xx for 10 minutes.
+      - alert: DiagnosticQueueBacklog
+        expr: error_intelligence_ai_jobs_queued > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI diagnostic queue exceeds 100 jobs
+          description: Check the AI worker, provider availability, and retry runbook.
+      - alert: EmbeddingQueueBacklog
+        expr: error_intelligence_embedding_jobs_queued > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Embedding queue exceeds 100 jobs
+          description: Check the embedding worker, provider availability, and retry runbook.
+      - alert: DatabasePoolWaiting
+        expr: hikaricp_connections_pending > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Requests are waiting for a database connection
+          description: Review database saturation and the database pool runbook.
+      - alert: ApplicationScrapeUnavailable
+        expr: up{job="error-intelligence"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Error Intelligence is unavailable to the metrics collector
+      - alert: WorkerJobTooOld
+        expr: error_intelligence_ai_oldest_job_seconds > 600 or error_intelligence_embedding_oldest_job_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Background work has waited for more than ten minutes
+      - alert: MetricsSnapshotStale
+        expr: time() - error_intelligence_metrics_last_success_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database metric collection is stale

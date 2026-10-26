@@ -1,0 +1,176 @@
+name: Phase gates
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back-end
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: back-end/pom.xml
+      - run: chmod +x mvnw
+      - name: Build the database image used by integration contracts
+        run: docker build -t eip-postgres-test:local ../infra/postgres
+      - run: ./mvnw -B -ntp verify
+      - name: Record dependency inventory
+        run: ./mvnw -B -ntp org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: |
+            back-end/target/surefire-reports
+            back-end/target/failsafe-reports
+            back-end/target/bom.json
+
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-release-jar
+          path: back-end/target/error-intelligence-backend-*.jar
+
+  java-security:
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-release-jar
+          path: artifact
+      - name: Scan packaged Java dependencies
+        run: >-
+          docker run --rm -v "$PWD/artifact:/work"
+          aquasec/trivy:0.75.0 rootfs --timeout 15m --scanners vuln --list-all-pkgs
+          --severity HIGH,CRITICAL --exit-code 1 --format json --output /work/java-advisories.json /work
+      - name: Require detected Java packages
+        if: always()
+        run: jq -e '[.Results[]? | select(.Type == "jar") | .Packages[]?] | length > 0' artifact/java-advisories.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: java-advisories
+          path: artifact/java-advisories.json
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front-end
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front-end/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  alert-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check alert behavior
+        run: >-
+          docker run --rm --entrypoint /bin/promtool
+          -v "$PWD/infra/observability:/work:ro" -w /work
+          prom/prometheus:v3.13.3 test rules prometheus-alerts.test.yml
+
+  public-demo-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment scripts and Compose isolation
+        shell: bash
+        run: |
+          bash -n infra/public-demo/init-env.sh infra/public-demo/deploy.sh infra/public-demo/backup.sh infra/public-demo/verify-backup.sh
+          node --check scripts/verify-public-demo.mjs
+          cat > /tmp/public-demo-ci.env <<'EOF'
+          APP_DOMAIN=example.duckdns.org
+          POSTGRES_PASSWORD=ci-placeholder-postgres
+          REDIS_PASSWORD=ci-placeholder-redis
+          AUTH_SIGNING_KEY=Y2ktcGxhY2Vob2xkZXItc2lnbmluZy1rZXktMzItYnl0ZXM=
+          SMTP_HOST=smtp.example.test
+          SMTP_USERNAME=ci-placeholder
+          SMTP_PASSWORD=ci-placeholder
+          MAIL_FROM=ci@example.test
+          EOF
+          docker compose --env-file /tmp/public-demo-ci.env -f infra/public-demo/compose.yml config --quiet
+          rm /tmp/public-demo-ci.env
+
+  application-smoke:
+    needs: [backend, frontend, alert-rules]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: front-end/package-lock.json
+      - run: node scripts/initialize-local.mjs
+      - run: mkdir -p .local/mail && chmod 0777 .local/mail
+      - run: docker compose -f infra/compose.yml -f infra/compose.ci.yml --env-file .env --profile app up --build -d --wait --wait-timeout 180
+      - run: curl --fail http://127.0.0.1:5173/actuator/health/readiness
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: front-end
+      - run: npm run test:e2e -- --workers=1
+        working-directory: front-end
+        env:
+          E2E_BASE_URL: http://127.0.0.1:5173
+          E2E_REQUIRE_READY: 'true'
+          E2E_LIVE: 'true'
+          E2E_PROXY: 'true'
+      - name: Scan runtime images and record immutable image identifiers
+        shell: bash
+        run: |
+          mkdir -p .local/release-evidence
+          scan_status=0
+          for service in backend frontend postgres redis; do
+            image=$(docker compose -f infra/compose.yml -f infra/compose.ci.yml --env-file .env --profile app images -q "$service")
+            docker image inspect --format '{{.Id}} {{json .RepoDigests}}' "$image" > ".local/release-evidence/$service-image.txt"
+            docker save "$image" -o ".local/release-evidence/$service.tar"
+            docker run --rm -v "$PWD/.local/release-evidence:/work" aquasec/trivy:0.75.0 image --input "/work/$service.tar" --scanners vuln --list-all-pkgs --severity HIGH,CRITICAL --exit-code 1 --format json --output "/work/$service-advisories.json" || scan_status=1
+            rm ".local/release-evidence/$service.tar"
+          done
+          git rev-parse HEAD > .local/release-evidence/revision.txt
+          exit "$scan_status"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-reports
+          path: front-end/playwright-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-security-evidence
+          path: |
+            .local/release-evidence/*.json
+            .local/release-evidence/*.txt
+      - run: docker compose -f infra/compose.yml -f infra/compose.ci.yml --env-file .env --profile app down
+        if: always()
+
+

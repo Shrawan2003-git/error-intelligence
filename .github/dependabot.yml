@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /back-end
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /front-end
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directories: [/back-end, /front-end, /infra/postgres, /infra/redis]
+    schedule: { interval: weekly }

@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "Error Intelligence Foundation",
+    "description": "Phase 0 operational API checks. No login or incident APIs exist yet.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://127.0.0.1:8080" }],
+  "item": [
+    {
+      "name": "Application metadata",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/system" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('metadata responds', () => pm.response.to.have.status(200));", "pm.test('server trace exists', () => pm.expect(pm.response.headers.has('X-Trace-Id')).to.be.true);"] } }]
+    },
+    {
+      "name": "Readiness",
+      "request": { "method": "GET", "url": "{{baseUrl}}/actuator/health/readiness" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('ready', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().status).to.eql('UP'); });", "pm.test('no component internals', () => pm.expect(pm.response.json()).not.to.have.property('components'));"] } }]
+    },
+    {
+      "name": "Liveness",
+      "request": { "method": "GET", "url": "{{baseUrl}}/actuator/health/liveness" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('live', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "Sensitive endpoint denied",
+      "request": { "method": "GET", "url": "{{baseUrl}}/actuator/env" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('denied safely', () => { pm.response.to.have.status(401); pm.expect(pm.response.json().code).to.eql('AUTHENTICATION_REQUIRED'); });"] } }]
+    }
+  ]
+}

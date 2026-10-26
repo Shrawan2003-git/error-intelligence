@@ -1,0 +1,12 @@
+# This override is only for isolated CI's loopback browser tests.
+# Production and the public CV demo use real SMTP, never file delivery.
+services:
+  backend:
+    environment:
+      PUBLIC_APP_URL: http://127.0.0.1:5173
+      APP_AUTH_SECURE_COOKIE: "false"
+      APP_AUTH_MAIL_MODE: file
+      APP_AUTH_MAIL_ALLOW_FILE: "true"
+      APP_AUTH_MAIL_OUTBOX: /app-mail
+    volumes:
+      - ../.local/mail:/app-mail

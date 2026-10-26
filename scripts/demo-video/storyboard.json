@@ -1,0 +1,155 @@
+[
+  {
+    "id": "opening",
+    "kind": "cover",
+    "eyebrow": "PRODUCT WALKTHROUGH",
+    "title": "Error Intelligence",
+    "subtitle": "From repeated Java errors to a verified fix",
+    "points": ["A shared place for application failures", "A practical path from evidence to resolution"],
+    "narration": "Meet Error Intelligence, a Java and React application for engineering teams. It helps a team see repeated application failures, investigate them together, and keep a record of what actually fixed them. This tour uses invented errors and a local test workspace."
+  },
+  {
+    "id": "problem",
+    "kind": "problem",
+    "eyebrow": "THE REAL-WORLD PROBLEM",
+    "title": "Errors are easy to lose in the noise",
+    "subtitle": "Logs show events. Teams need a clear investigation.",
+    "points": ["The same failure appears many times", "Evidence is scattered across logs", "Fixes are hard to find later"],
+    "narration": "Imagine a checkout service fails twenty-five times today. The team may see twenty-five separate log entries, but only a few underlying problems. It takes time to work out which failures are repeats, what changed, who is investigating, and whether a previous fix worked. That is the gap this application addresses."
+  },
+  {
+    "id": "solution",
+    "kind": "flow",
+    "eyebrow": "HOW THE SOLUTION WORKS",
+    "title": "One flow from error to learning",
+    "subtitle": "Each step leaves useful context for the next person.",
+    "points": ["Receive a safe error event", "Group repeats into an incident", "Investigate, resolve, and measure"],
+    "narration": "A Java service sends a sanitized error event to Error Intelligence. The backend checks the project key, removes sensitive data, and groups similar failures into an incident. Engineers can review evidence, comment, assign work, and record a verified resolution. Analytics then shows whether errors are improving."
+  },
+  {
+    "id": "account",
+    "kind": "screen",
+    "eyebrow": "STEP 1 · GET ACCESS",
+    "title": "Create and verify your account",
+    "subtitle": "Separate sign-in, sign-up, and recovery pages.",
+    "points": ["Create a workspace account", "Confirm the email link", "Sign in to your organization"],
+    "image": "docs/screenshots/guide-sign-in.png",
+    "narration": "A user creates an account and names a workspace. The app sends a one-time verification link, and sign-in is blocked until the email is confirmed. If the user forgets the password, the recovery page sends a short-lived reset link. Resetting the password signs out existing sessions."
+  },
+  {
+    "id": "projects",
+    "kind": "screen",
+    "eyebrow": "STEP 2 · ORGANIZE THE WORK",
+    "title": "Create a project for each service",
+    "subtitle": "Here the sample service is called Checkout API.",
+    "points": ["Projects separate application data", "Members work within an organization", "Roles control who can administer"],
+    "image": ".local/demo-video/stills/projects.png",
+    "narration": "After sign-in, create a project for the application you want to monitor. In this example it is the Checkout API. Each project owns its ingestion keys, error events, incidents, and analytics. An organization gives the team a shared workspace, while roles control who can change settings and who can only view."
+  },
+  {
+    "id": "key",
+    "kind": "screen",
+    "eyebrow": "STEP 3 · CONNECT THE SERVICE",
+    "title": "Create a project ingestion key",
+    "subtitle": "The full secret is shown once and belongs on the server.",
+    "points": ["Give the key a clear label", "Store it outside source control", "Revoke it if it is exposed"],
+    "image": ".local/demo-video/stills/ingestion-keys.png",
+    "narration": "Open the project and create an ingestion key. This is the credential that lets your Java service report errors to this project. The full value is displayed once; store it on the server, not in browser code or a Git repository. You can revoke a key and create another one if needed."
+  },
+  {
+    "id": "send",
+    "kind": "event",
+    "eyebrow": "STEP 4 · SEND A SAFE ERROR",
+    "title": "Your Java app sends the event",
+    "subtitle": "A small server-side sender posts to the ingestion endpoint.",
+    "points": ["POST /ingest/v1/events", "X-API-Key identifies the project", "Send sanitized exception details"],
+    "narration": "The dashboard does not automatically read errors from VS Code or your logs. Add a small server-side sender to your Java application. When an exception occurs, send an event ID, time, exception type, a safe message, and a sanitized stack trace to the ingestion endpoint. The backend validates the key and accepts the event."
+  },
+  {
+    "id": "group",
+    "kind": "screen",
+    "eyebrow": "STEP 5 · FIND THE PATTERN",
+    "title": "Repeated events become incidents",
+    "subtitle": "Twenty-five synthetic events become three investigation groups.",
+    "points": ["One issue instead of many log lines", "See occurrence counts and status", "Filter within the selected project"],
+    "image": ".local/demo-video/stills/incidents.png",
+    "narration": "In this demo, twenty-five invented checkout failures are grouped into three incidents: database timeouts, payment state errors, and inventory service failures. Instead of reading every event separately, an engineer sees the recurring problems and how often each happened. New events with the same fingerprint add to the existing group."
+  },
+  {
+    "id": "investigate",
+    "kind": "screen",
+    "eyebrow": "STEP 6 · INVESTIGATE TOGETHER",
+    "title": "Open the incident evidence",
+    "subtitle": "Use the error details to decide what to check next.",
+    "points": ["Inspect the safe stack trace", "Assign a teammate and set status", "Discuss findings in comments"],
+    "image": ".local/demo-video/stills/incident-detail.png",
+    "narration": "Open an incident to see the recent event evidence, first and last seen times, occurrence count, status, and assignee. The team can add comments as they investigate. The purpose is to keep the evidence and discussion next to the issue, so the next engineer does not have to reconstruct the story from scratch."
+  },
+  {
+    "id": "ai",
+    "kind": "screen",
+    "eyebrow": "OPTIONAL ASSISTANCE",
+    "title": "Ask for diagnostic suggestions",
+    "subtitle": "AI results need human review and a configured provider.",
+    "points": ["Analyze an incident", "Find related verified fixes", "Treat suggestions as hypotheses"],
+    "image": ".local/demo-video/stills/diagnostics.png",
+    "narration": "The diagnostics and related-incidents pages can use configured AI services to suggest possible causes or find similar verified fixes. These suggestions are evidence to review, not automatic decisions. In the free local demo, paid AI workers are disabled, so this video does not pretend that an AI result was generated. The core investigation flow still works."
+  },
+  {
+    "id": "resolution",
+    "kind": "screen",
+    "eyebrow": "STEP 7 · RECORD THE FIX",
+    "title": "Resolve with a reason, not just a click",
+    "subtitle": "The sample inventory incident has a verified resolution.",
+    "points": ["Write the resolution summary", "Record the root cause", "Keep the fix for future searches"],
+    "image": ".local/demo-video/stills/resolved-incident.png",
+    "narration": "When the team confirms a fix, an authorized member writes a resolution summary and root cause, then verifies the incident as resolved. In the sample, the inventory dependency was unavailable during checkout. Keeping that explanation makes future incidents easier to compare and gives the team a record of what actually worked."
+  },
+  {
+    "id": "analytics",
+    "kind": "screen",
+    "eyebrow": "STEP 8 · SEE THE TREND",
+    "title": "Analytics turns events into a view",
+    "subtitle": "This sample has 25 events and 3 incident groups.",
+    "points": ["Track event and incident counts", "See open work and resolution rate", "Spot frequent failures"],
+    "image": ".local/demo-video/stills/analytics.png",
+    "narration": "The analytics page shows how many events arrived, how many incidents they formed, what remains open, and the resolution rate. It also shows daily volume and frequent incidents for the selected project. This helps a team decide what needs attention and check whether the number of failures is going down after a fix."
+  },
+  {
+    "id": "team",
+    "kind": "screen",
+    "eyebrow": "TEAM & SECURITY",
+    "title": "Keep access and changes visible",
+    "subtitle": "Roles, live sessions, and audit history support the workflow.",
+    "points": ["Organization roles limit actions", "Audit events record important changes", "Sessions and keys can be revoked"],
+    "image": ".local/demo-video/stills/audit.png",
+    "narration": "The account and team pages manage who belongs to a workspace. Roles restrict administrative actions, project data stays within its organization, and an audit log records important changes. Behind the scenes, the app uses short-lived access tokens, rotating refresh sessions, CSRF protection, and hashed project keys. The user sees a simple workflow, while these controls protect it."
+  },
+  {
+    "id": "architecture",
+    "kind": "architecture",
+    "eyebrow": "HOW IT WAS BUILT",
+    "title": "A focused Java full-stack design",
+    "subtitle": "The browser talks to one secured backend.",
+    "points": ["React interface", "Java 21 and Spring Boot API", "PostgreSQL data and optional Redis/AI services"],
+    "narration": "The React frontend sends same-origin requests to a Java twenty-one, Spring Boot backend. The backend handles identity, project permissions, error intake, grouping, investigation, and analytics. PostgreSQL stores the record of work. Redis supports distributed rate limits outside the native local profile. Optional AI workers can be enabled with a provider and budget; they are not required for the basic product."
+  },
+  {
+    "id": "boundaries",
+    "kind": "boundaries",
+    "eyebrow": "HONEST CURRENT STATUS",
+    "title": "What is ready, and what still needs setup",
+    "subtitle": "The local workflow is real; deployment is a separate gate.",
+    "points": ["Account, ingestion, incidents, and analytics work locally", "Your Java app must send its own errors", "SMTP, AI, and public staging need deployment setup"],
+    "narration": "This local demo proves the connected application workflow with invented data. For everyday use, a Java service still needs an error sender. Hosted email delivery needs SMTP settings. Paid AI diagnostics need a configured provider, and public production staging remains an open deployment step. These are setup and release decisions, not features silently shown as complete in this video."
+  },
+  {
+    "id": "closing",
+    "kind": "closing",
+    "eyebrow": "TRY IT YOURSELF",
+    "title": "Start with one real service",
+    "subtitle": "Create a project, send one safe event, then investigate.",
+    "points": ["Start the local database, Java API, and frontend", "Verify an account and create a project key", "Send a test error and follow its incident"],
+    "narration": "To try the product, start the local database, Java backend, and frontend. Verify a new account, create a project and ingestion key, then send one synthetic error from your Java service or the guide's test command. Open the incident, investigate it, record a verified fix, and review analytics. The user guide beside this video has each command and screen."
+  }
+]

@@ -1,0 +1,90 @@
+name: error-intelligence
+
+services:
+  postgres:
+    build:
+      context: ./postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-error_intelligence}
+      POSTGRES_USER: ${POSTGRES_USER:-error_intelligence}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Different libc/locale implementation: restore logically into a fresh volume.
+      # The previous Debian postgres_data volume is deliberately not reused/deleted.
+      - postgres_alpine_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+    mem_limit: 512m
+
+  redis:
+    build:
+      context: ./redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxmemory 128mb --maxmemory-policy allkeys-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+    mem_limit: 192m
+
+  backend:
+    profiles: [app]
+    build:
+      context: ../back-end
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-error_intelligence}
+      DB_USERNAME: ${POSTGRES_USER:-error_intelligence}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      SERVER_PORT: 8080
+      FORWARDED_HEADERS_STRATEGY: NATIVE
+      AUTH_SIGNING_KEY: ${AUTH_SIGNING_KEY:?Set AUTH_SIGNING_KEY in .env}
+      AI_WORKER_ENABLED: ${AI_WORKER_ENABLED:-false}
+      AI_EMBEDDING_WORKER_ENABLED: ${AI_EMBEDDING_WORKER_ENABLED:-false}
+    ports:
+      - "127.0.0.1:${SERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 768m
+    restart: unless-stopped
+
+  frontend:
+    profiles: [app]
+    build:
+      context: ../front-end
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:8080"
+    depends_on:
+      backend: { condition: service_healthy }
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 128m
+    restart: unless-stopped
+
+volumes:
+  postgres_alpine_data:

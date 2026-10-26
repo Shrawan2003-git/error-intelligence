@@ -1,0 +1,71 @@
+rule_files:
+  - prometheus-alerts.yml
+evaluation_interval: 1m
+tests:
+  - name: low volume errors still fire after the hold period
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="error-intelligence",status="200"}'
+        values: '0+10.8x20'
+      - series: 'http_server_requests_seconds_count{job="error-intelligence",status="500"}'
+        values: '0+1.2x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ApiServerErrorRateHigh
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: ApiServerErrorRateHigh
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: API server error rate is above 5 percent
+              description: More than 5 percent of requests have returned 5xx for 10 minutes.
+  - name: idle service does not report an error ratio
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="error-intelligence",status="200"}'
+        values: '0x20'
+      - series: 'http_server_requests_seconds_count{job="error-intelligence",status="500"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ApiServerErrorRateHigh
+        exp_alerts: []
+  - name: collector outage fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'up{job="error-intelligence",instance="backend:8080"}'
+        values: '0x4 1x6'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ApplicationScrapeUnavailable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: ApplicationScrapeUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical, job: error-intelligence, instance: 'backend:8080' }
+            exp_annotations:
+              summary: Error Intelligence is unavailable to the metrics collector
+      - eval_time: 6m
+        alertname: ApplicationScrapeUnavailable
+        exp_alerts: []
+  - name: stale collection and old work are actionable
+    interval: 1m
+    input_series:
+      - series: 'error_intelligence_metrics_last_success_seconds{job="error-intelligence"}'
+        values: '0x10'
+      - series: 'error_intelligence_ai_oldest_job_seconds{job="error-intelligence"}'
+        values: '601x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MetricsSnapshotStale
+        exp_alerts:
+          - exp_labels: { severity: warning, job: error-intelligence }
+            exp_annotations:
+              summary: Database metric collection is stale
+      - eval_time: 6m
+        alertname: WorkerJobTooOld
+        exp_alerts:
+          - exp_labels: { severity: warning, job: error-intelligence }
+            exp_annotations:
+              summary: Background work has waited for more than ten minutes

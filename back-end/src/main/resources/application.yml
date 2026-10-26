@@ -1,0 +1,130 @@
+spring:
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:4}
+  application:
+    name: error-intelligence
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 5000
+      connection-init-sql: SET TIME ZONE 'UTC'
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: intelligence
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    clean-disabled: true
+    baseline-on-migrate: false
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      connect-timeout: 2s
+      timeout: 2s
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      '[mail.smtp.auth]': ${SMTP_AUTH:true}
+      '[mail.smtp.starttls.enable]': ${SMTP_STARTTLS:true}
+      '[mail.smtp.starttls.required]': ${SMTP_STARTTLS:true}
+      '[mail.smtp.connectiontimeout]': 5000
+      '[mail.smtp.timeout]': 5000
+      '[mail.smtp.writetimeout]': 5000
+  mvc:
+    problemdetails:
+      enabled: true
+server:
+  forward-headers-strategy: ${FORWARDED_HEADERS_STRATEGY:NONE}
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - prometheus
+      discovery:
+        enabled: false
+    jmx:
+      exposure:
+        exclude: '*'
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis
+    prometheus:
+      access: read-only
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    enabled: ${OTEL_TRACING_ENABLED:false}
+    sampling:
+      probability: ${OTEL_TRACING_SAMPLE_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+logging:
+  structured:
+    format:
+      console: logstash
+app:
+  version: ${APP_VERSION:0.1.0-SNAPSHOT}
+  phase: ANALYTICS_AND_OPERATIONS
+  auth:
+    signing-key: ${AUTH_SIGNING_KEY}
+    issuer: ${AUTH_ISSUER:error-intelligence}
+    secure-cookie: true
+    public-url: ${PUBLIC_APP_URL:}
+    mail:
+      mode: smtp
+      from: ${MAIL_FROM:}
+  ai:
+    embedding-daily-calls: ${AI_EMBEDDING_DAILY_CALLS:1000}
+    embedding-daily-characters: ${AI_EMBEDDING_DAILY_CHARACTERS:1000000}
+    openai:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      model: ${OPENAI_MODEL:gpt-4.1-mini}
+    embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    embedding-max-attempts: ${AI_EMBEDDING_MAX_ATTEMPTS:3}
+    embedding-retry-delay: ${AI_EMBEDDING_RETRY_DELAY:PT30S}
+    embedding-poll-interval: ${AI_EMBEDDING_POLL_INTERVAL:PT2S}
+    embedding-worker:
+      enabled: ${AI_EMBEDDING_WORKER_ENABLED:false}
+    worker:
+      enabled: ${AI_WORKER_ENABLED:true}
+    timeout: ${AI_TIMEOUT:PT12S}
+    daily-limit: ${AI_DAILY_ANALYSIS_LIMIT:100}
+    retry-delay: ${AI_RETRY_DELAY:PT15S}
+    max-attempts: ${AI_MAX_ATTEMPTS:2}
+    poll-interval: ${AI_POLL_INTERVAL:PT1S}
+  retention:
+    raw-event-days: ${RAW_EVENT_RETENTION_DAYS:0}
+    interval: ${RAW_EVENT_RETENTION_INTERVAL:PT1M}
+  observability:
+    prometheus-allowed-cidrs: ${PROMETHEUS_ALLOWED_CIDRS:127.0.0.1/32,::1/128}

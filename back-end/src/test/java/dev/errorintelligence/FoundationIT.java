@@ -1,0 +1,29 @@
+package dev.errorintelligence;
+
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
+
+@Testcontainers
+class FoundationIT extends FoundationContract {
+  @Container
+  static final PostgreSQLContainer postgres = new PostgreSQLContainer(TestImages.POSTGRES);
+
+  @Container
+  static final GenericContainer<?> redis =
+      new GenericContainer<>(DockerImageName.parse("redis:7.4.11-alpine")).withExposedPorts(6379);
+
+  @DynamicPropertySource
+  static void properties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", postgres::getJdbcUrl);
+    registry.add("spring.datasource.username", postgres::getUsername);
+    registry.add("spring.datasource.password", postgres::getPassword);
+    registry.add("spring.data.redis.host", redis::getHost);
+    registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    registry.add("spring.data.redis.password", () -> "");
+  }
+}

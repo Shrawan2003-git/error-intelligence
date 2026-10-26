@@ -1,0 +1,30 @@
+# Loopback-only, single-process development profile. Production uses Redis-backed limits.
+server:
+  address: 127.0.0.1
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASSWORD:}
+management:
+  health:
+    redis:
+      enabled: false
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
+app:
+  cache-required: false
+  ai:
+    worker:
+      enabled: ${AI_WORKER_ENABLED:false}
+    embedding-worker:
+      enabled: ${AI_EMBEDDING_WORKER_ENABLED:false}
+  auth:
+    secure-cookie: false
+    public-url: ${PUBLIC_APP_URL:http://127.0.0.1:5173}
+    mail:
+      mode: file
+      outbox: ${AUTH_MAIL_OUTBOX:../.local/mail}

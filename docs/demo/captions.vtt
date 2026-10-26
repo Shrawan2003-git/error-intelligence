@@ -1,0 +1,184 @@
+WEBVTT
+
+00:00:00.800 --> 00:00:05.964
+Meet Error Intelligence, a Java and React application for engineering teams.
+
+00:00:05.964 --> 00:00:15.352
+It helps a team see repeated application failures, investigate them together, and keep a record of what actually fixed them.
+
+00:00:15.352 --> 00:00:20.046
+This tour uses invented errors and a local test workspace.
+
+00:00:21.946 --> 00:00:25.733
+Imagine a checkout service fails twenty-five times today.
+
+00:00:25.733 --> 00:00:32.359
+The team may see twenty-five separate log entries, but only a few underlying problems.
+
+00:00:32.359 --> 00:00:42.299
+It takes time to work out which failures are repeats, what changed, who is investigating, and whether a previous fix worked.
+
+00:00:42.299 --> 00:00:45.612
+That is the gap this application addresses.
+
+00:00:47.512 --> 00:00:53.182
+A Java service sends a sanitized error event to Error Intelligence.
+
+00:00:53.182 --> 00:01:01.429
+The backend checks the project key, removes sensitive data, and groups similar failures into an incident.
+
+00:01:01.429 --> 00:01:07.614
+Engineers can review evidence, comment, assign work, and record a verified resolution.
+
+00:01:07.614 --> 00:01:11.223
+Analytics then shows whether errors are improving.
+
+00:01:13.123 --> 00:01:17.239
+A user creates an account and names a workspace.
+
+00:01:17.239 --> 00:01:24.558
+The app sends a one-time verification link, and sign-in is blocked until the email is confirmed.
+
+00:01:24.558 --> 00:01:30.962
+If the user forgets the password, the recovery page sends a short-lived reset link.
+
+00:01:30.962 --> 00:01:34.164
+Resetting the password signs out existing sessions.
+
+00:01:36.064 --> 00:01:41.473
+After sign-in, create a project for the application you want to monitor.
+
+00:01:41.473 --> 00:01:45.079
+In this example it is the Checkout API.
+
+00:01:45.079 --> 00:01:50.038
+Each project owns its ingestion keys, error events, incidents, and analytics.
+
+00:01:50.038 --> 00:01:59.054
+An organization gives the team a shared workspace, while roles control who can change settings and who can only view.
+
+00:02:00.954 --> 00:02:04.101
+Open the project and create an ingestion key.
+
+00:02:04.101 --> 00:02:09.609
+This is the credential that lets your Java service report errors to this project.
+
+00:02:09.609 --> 00:02:17.083
+The full value is displayed once; store it on the server, not in browser code or a Git repository.
+
+00:02:17.083 --> 00:02:21.410
+You can revoke a key and create another one if needed.
+
+00:02:23.310 --> 00:02:29.417
+The dashboard does not automatically read errors from VS Code or your logs.
+
+00:02:29.417 --> 00:02:33.644
+Add a small server-side sender to your Java application.
+
+00:02:33.644 --> 00:02:44.448
+When an exception occurs, send an event ID, time, exception type, a safe message, and a sanitized stack trace to the ingestion endpoint.
+
+00:02:44.448 --> 00:02:48.676
+The backend validates the key and accepts the event.
+
+00:02:50.576 --> 00:03:00.669
+In this demo, twenty-five invented checkout failures are grouped into three incidents: database timeouts, payment state errors, and inventory service failures.
+
+00:03:00.669 --> 00:03:08.840
+Instead of reading every event separately, an engineer sees the recurring problems and how often each happened.
+
+00:03:08.840 --> 00:03:14.126
+New events with the same fingerprint add to the existing group.
+
+00:03:16.026 --> 00:03:24.093
+Open an incident to see the recent event evidence, first and last seen times, occurrence count, status, and assignee.
+
+00:03:24.093 --> 00:03:27.489
+The team can add comments as they investigate.
+
+00:03:27.489 --> 00:03:38.528
+The purpose is to keep the evidence and discussion next to the issue, so the next engineer does not have to reconstruct the story from scratch.
+
+00:03:40.428 --> 00:03:49.619
+The diagnostics and related-incidents pages can use configured AI services to suggest possible causes or find similar verified fixes.
+
+00:03:49.619 --> 00:03:53.973
+These suggestions are evidence to review, not automatic decisions.
+
+00:03:53.973 --> 00:04:04.615
+In the free local demo, paid AI workers are disabled, so this video does not pretend that an AI result was generated.
+
+00:04:04.615 --> 00:04:07.518
+The core investigation flow still works.
+
+00:04:09.418 --> 00:04:19.113
+When the team confirms a fix, an authorized member writes a resolution summary and root cause, then verifies the incident as resolved.
+
+00:04:19.113 --> 00:04:23.520
+In the sample, the inventory dependency was unavailable during checkout.
+
+00:04:23.520 --> 00:04:31.893
+Keeping that explanation makes future incidents easier to compare and gives the team a record of what actually worked.
+
+00:04:33.793 --> 00:04:41.956
+The analytics page shows how many events arrived, how many incidents they formed, what remains open, and the resolution rate.
+
+00:04:41.956 --> 00:04:46.854
+It also shows daily volume and frequent incidents for the selected project.
+
+00:04:46.854 --> 00:04:55.425
+This helps a team decide what needs attention and check whether the number of failures is going down after a fix.
+
+00:04:57.325 --> 00:05:03.008
+The account and team pages manage who belongs to a workspace.
+
+00:05:03.008 --> 00:05:11.791
+Roles restrict administrative actions, project data stays within its organization, and an audit log records important changes.
+
+00:05:11.791 --> 00:05:21.091
+Behind the scenes, the app uses short-lived access tokens, rotating refresh sessions, CSRF protection, and hashed project keys.
+
+00:05:21.091 --> 00:05:26.774
+The user sees a simple workflow, while these controls protect it.
+
+00:05:28.674 --> 00:05:35.710
+The React frontend sends same-origin requests to a Java twenty-one, Spring Boot backend.
+
+00:05:35.710 --> 00:05:42.205
+The backend handles identity, project permissions, error intake, grouping, investigation, and analytics.
+
+00:05:42.205 --> 00:05:45.453
+PostgreSQL stores the record of work.
+
+00:05:45.453 --> 00:05:50.865
+Redis supports distributed rate limits outside the native local profile.
+
+00:05:50.865 --> 00:06:01.148
+Optional AI workers can be enabled with a provider and budget; they are not required for the basic product.
+
+00:06:03.048 --> 00:06:08.516
+This local demo proves the connected application workflow with invented data.
+
+00:06:08.516 --> 00:06:13.983
+For everyday use, a Java service still needs an error sender.
+
+00:06:13.983 --> 00:06:16.965
+Hosted email delivery needs SMTP settings.
+
+00:06:16.965 --> 00:06:24.917
+Paid AI diagnostics need a configured provider, and public production staging remains an open deployment step.
+
+00:06:24.917 --> 00:06:32.373
+These are setup and release decisions, not features silently shown as complete in this video.
+
+00:06:34.273 --> 00:06:39.888
+To try the product, start the local database, Java backend, and frontend.
+
+00:06:39.888 --> 00:06:51.120
+Verify a new account, create a project and ingestion key, then send one synthetic error from your Java service or the guide's test command.
+
+00:06:51.120 --> 00:06:56.735
+Open the incident, investigate it, record a verified fix, and review analytics.
+
+00:06:56.735 --> 00:07:01.883
+The user guide beside this video has each command and screen.

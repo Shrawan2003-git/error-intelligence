@@ -1,0 +1,1257 @@
+openapi: 3.0.3
+info:
+  title: Error Intelligence API
+  version: 0.1.0
+  description: Identity, tenant-scoped project management, secure ingestion and operational API.
+servers:
+  - url: /
+security: []
+paths:
+  /api/v1/projects/{id}/environments:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: listProjectEnvironments
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Up to 100 project environments
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/NamedProjectResource" } }
+    post:
+      operationId: createProjectEnvironment
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 80, minLength: 1 } } }
+      responses:
+        "201":
+          description: Environment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NamedProjectResource" }
+  /api/v1/projects/{id}/releases:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: listProjectReleases
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Up to 100 project releases
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/NamedProjectResource" } }
+    post:
+      operationId: createProjectRelease
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [version], properties: { version: { type: string, maxLength: 120, minLength: 1 } } }
+      responses:
+        "201":
+          description: Release created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NamedProjectResource" }
+  /api/v1/system:
+    get:
+      operationId: getSystem
+      summary: Read non-sensitive application metadata
+      responses:
+        "200":
+          description: Application identity
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, version, phase, cacheRequired]
+                properties:
+                  name: { type: string }
+                  version: { type: string }
+                  phase: { type: string, enum: [SIMILARITY_RAG] }
+                  cacheRequired: { type: boolean }
+  /api/v1/auth/csrf:
+    get:
+      operationId: getCsrfToken
+      summary: Obtain a same-origin CSRF token
+      responses:
+        "200":
+          description: Token for the named request header
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, headerName]
+                properties:
+                  token: { type: string }
+                  headerName: { type: string }
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      summary: Register an account and queue email verification
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Registration" }
+      responses:
+        "202": { description: Verification email queued when eligible; no session issued }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/verification/resend:
+    post:
+      operationId: resendVerification
+      summary: Request another verification link
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailInput" }
+      responses:
+        "202": { description: Same response for known and unknown addresses }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/verification/confirm:
+    post:
+      operationId: confirmVerification
+      summary: Confirm a single-use email verification link
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TokenInput" }
+      responses:
+        "204": { description: Email verified }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/password/forgot:
+    post:
+      operationId: forgotPassword
+      summary: Request a password reset link
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailInput" }
+      responses:
+        "202": { description: Same response for known and unknown addresses }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/password/reset:
+    post:
+      operationId: resetPassword
+      summary: Change password with a single-use reset link and revoke sessions
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetInput" }
+      responses:
+        "204": { description: Password changed; existing sessions revoked }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Authenticate with email and password
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Account and short-lived access token; refresh token is HttpOnly cookie
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate refresh token and issue a new access token
+      security: [{ CsrfCookie: [], CsrfHeader: [], RefreshCookie: [] }]
+      responses:
+        "200":
+          description: New access token and rotated refresh cookie
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the session and clear the refresh cookie
+      security: [{ CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "204": { description: Session revoked }
+  /api/v1/auth/me:
+    get:
+      operationId: getCurrentAccount
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Current account and organization memberships
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+        "401": { $ref: "#/components/responses/Problem" }
+  /api/v1/auth/organization:
+    post:
+      operationId: switchOrganization
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId]
+              properties:
+                organizationId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: New access token bound to the selected membership
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/organizations:
+    post:
+      operationId: createOrganization
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+      responses:
+        "201":
+          description: Organization created with current user as owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Organization" }
+  /api/v1/organizations/{id}/members:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: listMembers
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 1000000, default: 0 }, description: Offset into a stable page of at most 100 members }
+      responses:
+        "200":
+          description: Members in the active organization
+          content:
+            application/json:
+              schema:
+                { type: array, items: { $ref: "#/components/schemas/Member" } }
+        "404": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: addMember
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role: { $ref: "#/components/schemas/Role" }
+      responses:
+        "201": { description: Membership added }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/organizations/{id}/members/{userId}:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+      - {
+          name: userId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    patch:
+      operationId: changeMemberRole
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: "#/components/schemas/Role" }
+      responses:
+        "204": { description: Role updated }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: removeMember
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "204": { description: Membership removed }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/projects:
+    get:
+      operationId: listProjects
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 0, default: 0 },
+          }
+        - {
+            name: size,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        "200":
+          description: Projects for the active organization only
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, size]
+                properties:
+                  items:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/Project" },
+                    }
+                  total: { type: integer, format: int64 }
+                  page: { type: integer }
+                  size: { type: integer }
+    post:
+      operationId: createProject
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string, maxLength: 120 }
+                slug:
+                  {
+                    type: string,
+                    maxLength: 80,
+                    pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  }
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /api/v1/projects/{id}:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getProject
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Project in the active organization
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "404": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: renameProject
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+      responses:
+        "200":
+          description: Project renamed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "404": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: archiveProject
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "204": { description: Project archived and ingestion keys revoked }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/projects/{id}/keys:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: listIngestionKeys
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 1000000, default: 0 }, description: Offset into a stable page of at most 100 keys }
+      responses:
+        "200":
+          description: Safe key metadata; secret values are never returned again
+          content:
+            application/json:
+              schema:
+                {
+                  type: array,
+                  items: { $ref: "#/components/schemas/IngestionKey" },
+                }
+    post:
+      operationId: createIngestionKey
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, maxLength: 100 }
+      responses:
+        "201":
+          description: Secret returned once
+          headers:
+            Cache-Control: { schema: { type: string, example: no-store } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [metadata, secret]
+                properties:
+                  metadata: { $ref: "#/components/schemas/IngestionKey" }
+                  secret: { type: string }
+  /api/v1/projects/{id}/keys/{keyId}:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+      - {
+          name: keyId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    delete:
+      operationId: revokeIngestionKey
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "204": { description: Key revoked; future ingestion calls are rejected }
+        "404": { $ref: "#/components/responses/Problem" }
+  /ingest/v1/events:
+    post:
+      operationId: ingestErrorEvent
+      summary: Submit a sanitized, idempotent application error event
+      description: JSON request bodies are limited to 256 KiB. Secret and PII redaction runs before persistence.
+      security: [{ IngestionKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ErrorEventInput" }
+      responses:
+        "202":
+          description: Event accepted; a duplicate event ID returns the original event ID
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IngestionReceipt" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "413": { $ref: "#/components/responses/Problem" }
+        "415": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/projects/{projectId}/incidents:
+    parameters:
+      - {
+          name: projectId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: listIncidents
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - {
+            name: status,
+            in: query,
+            schema: { $ref: "#/components/schemas/IncidentStatus" },
+          }
+        - {
+            name: environment,
+            in: query,
+            schema: { type: string, maxLength: 80 },
+          }
+        - { name: release, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: q, in: query, schema: { type: string, maxLength: 120 } }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 0, maximum: 100000, default: 0 },
+          }
+        - {
+            name: size,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 20 },
+          }
+      responses:
+        "200":
+          description: Tenant-scoped, newest-first incident page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentPage" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/projects/{projectId}/analytics/overview:
+    parameters:
+      - {
+          name: projectId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+      - {
+          name: days,
+          in: query,
+          required: false,
+          schema: { type: integer, minimum: 7, maximum: 90, default: 30 },
+        }
+    get:
+      operationId: getProjectAnalyticsOverview
+      summary: Read tenant-scoped event and incident analytics
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Aggregated counts and daily project event volume
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [
+                    days,
+                    eventCount,
+                    incidentCount,
+                    openCount,
+                    acknowledgedCount,
+                    resolvedCount,
+                    resolutionRate,
+                    dailyEvents,
+                    topIncidents,
+                  ]
+                properties:
+                  days: { type: integer }
+                  eventCount: { type: integer, format: int64 }
+                  incidentCount: { type: integer, format: int64 }
+                  openCount: { type: integer, format: int64 }
+                  acknowledgedCount: { type: integer, format: int64 }
+                  resolvedCount: { type: integer, format: int64 }
+                  resolutionRate: { type: number, minimum: 0, maximum: 1 }
+                  dailyEvents:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, count]
+                      properties:
+                        date: { type: string, format: date }
+                        count: { type: integer, format: int64 }
+                  topIncidents:
+                    type: array
+                    items:
+                      type: object
+                      required: [title, occurrenceCount, status]
+                      properties:
+                        title: { type: string }
+                        occurrenceCount: { type: integer, format: int64 }
+                        status:
+                          { type: string, enum: [OPEN, ACKNOWLEDGED, RESOLVED] }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/audit:
+    get:
+      operationId: getOrganizationAuditTrail
+      summary: Read recent security and administration events
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+      responses:
+        "200":
+          description: Newest audit entries for the active organization; Owner or Admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, limit]
+                properties:
+                  limit: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, action, createdAt]
+                      properties:
+                        id: { type: string, format: uuid }
+                        actorId: { type: string, format: uuid, nullable: true }
+                        action: { type: string }
+                        targetId: { type: string, format: uuid, nullable: true }
+                        createdAt: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /actuator/prometheus:
+    get:
+      operationId: scrapePrometheusMetrics
+      summary: Scrape low-cardinality application metrics from the configured CIDR allowlist
+      responses:
+        "200": { description: Prometheus exposition format }
+        "404": { description: Scraper address is not allowlisted }
+  /api/v1/incidents/{id}:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getIncident
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Incident summary, recent events and investigation history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentDetail" }
+        "404": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateIncident
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentUpdate" }
+      responses:
+        "200":
+          description: Updated incident status or assignment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentSummary" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/incidents/{id}/comments:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: addIncidentComment
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 4000 }
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentMutation" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/incidents/{id}/resolve:
+    parameters:
+      - {
+          name: id,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: verifyIncidentResolution
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary, rootCause]
+              properties:
+                summary: { type: string, maxLength: 500 }
+                rootCause: { type: string, maxLength: 4000 }
+      responses:
+        "201":
+          description: Human-verified resolution created and incident closed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IncidentMutation" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/incidents/{incidentId}/ai/analyze:
+    parameters:
+      - {
+          name: incidentId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: requestIncidentDiagnostic
+      summary: Queue a tenant-scoped diagnostic from sanitized incident evidence
+      description: Requires an OWNER, ADMIN, or DEVELOPER role. Requests are limited per minute and by a configurable daily organization quota; an active duplicate returns its existing job. Provider failure returns a deterministic manual-investigation fallback.
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "202":
+          description: Analysis accepted or an active analysis already exists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiagnosticAccepted" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/v1/incidents/{incidentId}/ai/analyses/{analysisId}:
+    parameters:
+      - {
+          name: incidentId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+      - {
+          name: analysisId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    get:
+      operationId: getIncidentDiagnostic
+      summary: Read a tenant-scoped diagnostic analysis
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Current analysis state and validated result, when available
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiagnosticAnalysis" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/incidents/{incidentId}/similar:
+    parameters:
+      - {
+          name: incidentId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        }
+    post:
+      operationId: findSimilarIncidents
+      summary: Search the current project for related incidents and verified resolutions
+      security: [{ BearerAuth: [], CsrfCookie: [], CsrfHeader: [] }]
+      responses:
+        "200":
+          description: Semantic matches scoped to the incident organization and project
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, embeddingModel]
+                properties:
+                  embeddingModel: { type: string }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        [sourceId, incidentId, sourceType, title, similarity]
+                      properties:
+                        sourceId: { type: string, format: uuid }
+                        incidentId: { type: string, format: uuid }
+                        sourceType:
+                          { type: string, enum: [INCIDENT, RESOLUTION] }
+                        title: { type: string }
+                        summary: { type: string, nullable: true }
+                        rootCause: { type: string, nullable: true }
+                        similarity: { type: number, minimum: 0, maximum: 1 }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /actuator/health:
+    get:
+      operationId: getHealth
+      summary: Overall health without component details
+      responses:
+        "200": { $ref: "#/components/responses/Healthy" }
+        "503": { $ref: "#/components/responses/Unhealthy" }
+  /actuator/health/liveness:
+    get:
+      operationId: getLiveness
+      summary: Process liveness independent of external dependencies
+      responses:
+        "200": { $ref: "#/components/responses/Healthy" }
+        "503": { $ref: "#/components/responses/Unhealthy" }
+  /actuator/health/readiness:
+    get:
+      operationId: getReadiness
+      summary: Required dependency readiness (PostgreSQL and production Redis)
+      responses:
+        "200": { $ref: "#/components/responses/Healthy" }
+        "503": { $ref: "#/components/responses/Unhealthy" }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    CsrfCookie:
+      type: apiKey
+      in: cookie
+      name: XSRF-TOKEN
+    CsrfHeader:
+      type: apiKey
+      in: header
+      name: X-XSRF-TOKEN
+    RefreshCookie:
+      type: apiKey
+      in: cookie
+      name: EI_REFRESH
+    IngestionKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    NamedProjectResource:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    Role:
+      type: string
+      enum: [OWNER, ADMIN, DEVELOPER, VIEWER]
+    Registration:
+      type: object
+      required: [email, password, displayName, organizationName]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password:
+          { type: string, format: password, minLength: 12, maxLength: 64 }
+        displayName: { type: string, maxLength: 100 }
+        organizationName: { type: string, maxLength: 120 }
+    EmailInput:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+    TokenInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, minLength: 43, maxLength: 43 }
+    PasswordResetInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, minLength: 43, maxLength: 43 }
+        newPassword: { type: string, format: password, minLength: 12, maxLength: 64 }
+    Organization:
+      type: object
+      required: [id, name, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { $ref: "#/components/schemas/Role" }
+    Account:
+      type: object
+      required: [id, email, displayName, organizations, activeOrganizationId]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        organizations:
+          { type: array, items: { $ref: "#/components/schemas/Organization" } }
+        activeOrganizationId: { type: string, format: uuid }
+    Session:
+      type: object
+      required: [accessToken, expiresIn, account]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, example: 600 }
+        account: { $ref: "#/components/schemas/Account" }
+    Member:
+      type: object
+      required: [userId, displayName, email, role]
+      properties:
+        userId: { type: string, format: uuid }
+        displayName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/Role" }
+    Project:
+      type: object
+      required: [id, name, slug, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        createdAt: { type: string, format: date-time }
+        archivedAt: { type: string, format: date-time, nullable: true }
+    IngestionKey:
+      type: object
+      required: [id, label, prefix, scope, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        prefix: { type: string }
+        scope: { type: string, enum: [INGEST] }
+        createdAt: { type: string, format: date-time }
+        revokedAt: { type: string, format: date-time, nullable: true }
+    ErrorEventInput:
+      type: object
+      required: [eventId, occurredAt, environment, exceptionType, message]
+      properties:
+        eventId:
+          {
+            type: string,
+            format: uuid,
+            description: Stable client event UUID used for idempotency,
+          }
+        occurredAt: { type: string, format: date-time }
+        environment: { type: string, maxLength: 80 }
+        release: { type: string, maxLength: 120 }
+        exceptionType: { type: string, maxLength: 500 }
+        message: { type: string, maxLength: 4000 }
+        stackTrace: { type: string, maxLength: 12000 }
+        request:
+          type: object
+          properties:
+            method: { type: string, maxLength: 16 }
+            path: { type: string, maxLength: 2048 }
+            headers:
+              {
+                type: object,
+                maxProperties: 40,
+                additionalProperties: { type: string, maxLength: 1000 },
+              }
+            query:
+              {
+                type: object,
+                maxProperties: 40,
+                additionalProperties: { type: string, maxLength: 1000 },
+              }
+            bodyExcerpt: { type: string, maxLength: 4000 }
+        environmentValues:
+          type: object
+          maxProperties: 40
+          additionalProperties: { type: string, maxLength: 2000 }
+    IncidentStatus:
+      type: string
+      enum: [OPEN, ACKNOWLEDGED, RESOLVED]
+    IncidentSummary:
+      type: object
+      required: [id, title, status, occurrenceCount, firstSeen, lastSeen]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        status: { $ref: "#/components/schemas/IncidentStatus" }
+        assigneeId: { type: string, format: uuid, nullable: true }
+        occurrenceCount: { type: integer, format: int64 }
+        firstSeen: { type: string, format: date-time }
+        lastSeen: { type: string, format: date-time }
+        environment: { type: string, nullable: true }
+        release: { type: string, nullable: true }
+    IncidentPage:
+      type: object
+      required: [items, total, page, size]
+      properties:
+        items:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/IncidentSummary" },
+          }
+        total: { type: integer, format: int64 }
+        page: { type: integer }
+        size: { type: integer }
+    IncidentUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/IncidentStatus" }
+        assigneeId: { type: string, format: uuid, nullable: true }
+    IncidentEvent:
+      type: object
+      required:
+        [
+          id,
+          occurredAt,
+          environment,
+          exceptionType,
+          message,
+          stackTrace,
+          requestMetadata,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        occurredAt: { type: string, format: date-time }
+        environment: { type: string }
+        release: { type: string, nullable: true }
+        exceptionType: { type: string }
+        message: { type: string }
+        stackTrace: { type: string }
+        requestMetadata:
+          {
+            type: string,
+            description: Sanitized JSON object serialized as text,
+          }
+    IncidentComment:
+      type: object
+      required: [id, authorId, authorName, body, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        authorName: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+    IncidentResolution:
+      type: object
+      required: [id, summary, rootCause, verifiedBy, verifierName, verifiedAt]
+      properties:
+        id: { type: string, format: uuid }
+        summary: { type: string }
+        rootCause: { type: string }
+        verifiedBy: { type: string, format: uuid }
+        verifierName: { type: string }
+        verifiedAt: { type: string, format: date-time }
+    DiagnosticStatus:
+      type: string
+      enum: [QUEUED, RUNNING, SUCCEEDED, RETRYING, FALLBACK]
+    DiagnosticCategory:
+      type: string
+      enum: [DATABASE, DI, AUTH, NETWORK, VALIDATION, APPLICATION, UNKNOWN]
+    DiagnosticAccepted:
+      type: object
+      required: [analysisId, status, createdAt]
+      properties:
+        analysisId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/DiagnosticStatus" }
+        createdAt: { type: string, format: date-time }
+    DiagnosticAnalysis:
+      type: object
+      required:
+        [
+          id,
+          incidentId,
+          status,
+          model,
+          promptVersion,
+          result,
+          failureCode,
+          attemptCount,
+          inputTokens,
+          outputTokens,
+          createdAt,
+          updatedAt,
+          finishedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        incidentId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/DiagnosticStatus" }
+        model: { type: string }
+        promptVersion: { type: string }
+        result:
+          { $ref: "#/components/schemas/DiagnosticResult", nullable: true }
+        failureCode: { type: string, nullable: true }
+        attemptCount: { type: integer }
+        inputTokens: { type: integer, nullable: true }
+        outputTokens: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+    DiagnosticResult:
+      type: object
+      required:
+        [
+          category,
+          confidence,
+          summary,
+          evidence,
+          hypotheses,
+          diagnosticSteps,
+          relatedResolutionIds,
+          limitations,
+        ]
+      properties:
+        category: { $ref: "#/components/schemas/DiagnosticCategory" }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        summary: { type: string, maxLength: 2000 }
+        evidence:
+          type: array
+          items:
+            type: object
+            required: [field, excerpt]
+            properties:
+              field:
+                {
+                  type: string,
+                  enum: [exceptionType, message, stackTrace, route],
+                }
+              excerpt: { type: string, maxLength: 500 }
+        hypotheses:
+          type: array
+          items:
+            type: object
+            required: [cause, rationale, confidence]
+            properties:
+              cause: { type: string, maxLength: 500 }
+              rationale: { type: string, maxLength: 1000 }
+              confidence: { type: number, minimum: 0, maximum: 1 }
+        diagnosticSteps:
+          type: array
+          items:
+            type: object
+            required: [order, action, expectedSignal, riskLevel]
+            properties:
+              order: { type: integer, minimum: 1 }
+              action: { type: string, maxLength: 700 }
+              expectedSignal: { type: string, maxLength: 500 }
+              riskLevel: { type: string, enum: [LOW, MEDIUM] }
+        relatedResolutionIds:
+          { type: array, items: { type: string, format: uuid } }
+        limitations: { type: array, items: { type: string, maxLength: 500 } }
+    IncidentMutation:
+      type: object
+      required: [id, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    IncidentDetail:
+      type: object
+      required: [incident, recentEvents, comments, resolutions]
+      properties:
+        incident: { $ref: "#/components/schemas/IncidentSummary" }
+        recentEvents:
+          { type: array, items: { $ref: "#/components/schemas/IncidentEvent" } }
+        comments:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/IncidentComment" },
+          }
+        resolutions:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/IncidentResolution" },
+          }
+    IngestionReceipt:
+      type: object
+      required: [eventId, projectId, duplicate, acceptedAt]
+      properties:
+        eventId: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        duplicate: { type: boolean }
+        acceptedAt: { type: string, format: date-time }
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [UP, DOWN, UNKNOWN, OUT_OF_SERVICE] }
+        groups: { type: array, items: { type: string } }
+    Problem:
+      type: object
+      required: [type, title, status, code, traceId]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        traceId: { type: string }
+  responses:
+    Problem:
+      description: Safe RFC 9457 problem response
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Healthy:
+      description: Healthy
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Health" }
+    Unhealthy:
+      description: Unhealthy or not ready; no internal dependency details disclosed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Health" }
