@@ -80,7 +80,7 @@
         <executions><execution><goals><goal>build-info</goal></goals></execution></executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-enforcer-plugin</artifactId><version>3.6.2</version>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-enforcer-plugin</artifactId><version>3.7.0</version>
         <executions><execution><id>enforce-toolchain</id><goals><goal>enforce</goal></goals>
           <configuration><rules><requireJavaVersion><version>[21,22)</version></requireJavaVersion>
             <requireMavenVersion><version>[3.9,4)</version></requireMavenVersion></rules></configuration>
