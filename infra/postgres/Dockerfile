@@ -4,7 +4,7 @@ ADD https://github.com/tianon/gosu.git#1.19 /src
 WORKDIR /src
 RUN CGO_ENABLED=0 go build -trimpath -o /gosu .
 
-FROM postgres:17-alpine AS vector-build
+FROM postgres:18-alpine AS vector-build
 ADD https://github.com/pgvector/pgvector.git#v0.8.7 /src
 # Keep compilers out of the runtime. Portable code avoids host-specific CPU flags.
 RUN apk add --no-cache build-base \
@@ -12,7 +12,7 @@ RUN apk add --no-cache build-base \
     && make OPTFLAGS="" with_llvm=no \
     && make install with_llvm=no DESTDIR=/out
 
-FROM postgres:17-alpine
+FROM postgres:18-alpine
 RUN apk upgrade --no-cache
 COPY --from=vector-build /out/ /
 COPY --from=vector-build /src/LICENSE /usr/share/doc/pgvector/LICENSE
