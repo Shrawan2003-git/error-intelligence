@@ -5,7 +5,7 @@ RUN npm ci --no-fund --no-audit
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.30.5-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine AS runtime
 USER root
 RUN apk upgrade --no-cache
 USER 101
