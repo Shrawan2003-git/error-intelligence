@@ -20,7 +20,7 @@ redis_password="$(openssl rand -hex 24)"
 signing_key="$(openssl rand -base64 48 | tr -d '\n')"
 cat > "$destination" <<EOF
 APP_DOMAIN=$domain
-APP_VERSION=0.1.0-cv-demo
+APP_VERSION=0.1.0
 POSTGRES_PASSWORD=$postgres_password
 REDIS_PASSWORD=$redis_password
 AUTH_SIGNING_KEY=$signing_key

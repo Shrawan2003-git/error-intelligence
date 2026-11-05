@@ -1,5 +1,5 @@
 # This override is only for isolated CI's loopback browser tests.
-# Production and the public CV demo use real SMTP, never file delivery.
+# Public deployments use real SMTP, never file delivery.
 services:
   backend:
     environment:

@@ -21,6 +21,6 @@ try {
 }
 ```
 
-The call is asynchronous and returns `CompletableFuture<Boolean>`. It sends the exception class, a short stack frame list, and **only the safe message you supply**. It does not read the exception message, request bodies, headers, or environment values. An event is accepted when the future completes with `true`. Do not rely on this best-effort example as a durable production queue; the CV demo only needs a simple sender. The backend also validates and redacts incoming data.
+The call is asynchronous and returns `CompletableFuture<Boolean>`. It sends the exception class, a short stack frame list, and **only the safe message you supply**. It does not read the exception message, request bodies, headers, or environment values. An event is accepted when the future completes with `true`. Do not rely on this best-effort example as a durable production queue; this small deployment only needs a simple sender. The backend also validates and redacts incoming data.
 
 For a one-off first test without changing another Java app, use the [PowerShell request in the user guide](../../docs/user-guide.md#5-send-a-first-test-error-to-the-backend).

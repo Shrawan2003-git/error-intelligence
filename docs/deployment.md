@@ -1,4 +1,4 @@
-# Free public CV demo deployment
+# Free public deployment
 
 This is a small **personal portfolio deployment**, not a claim of production uptime. The local application and tests already work. The files in `infra/public-demo/` run the whole app on one Linux VM: PostgreSQL with pgvector, Redis, Java API, React frontend, and Caddy HTTPS. Only ports 80 and 443 are published by Compose. AI workers stay off, so there are no paid model calls.
 

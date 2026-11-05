@@ -6,7 +6,7 @@ A Java full-stack workspace for application errors, incident investigation and e
 
 [Watch the narrated product demo](docs/demo/error-intelligence-walkthrough.webm) · [Read the plain-language walkthrough](docs/demo/README.md) · [Start here: user guide](docs/user-guide.md) · [Incident investigation screenshot](docs/screenshots/portfolio-incidents.png) · [Mobile incident screenshot](docs/screenshots/portfolio-mobile-incidents.png) · [Run the no-cost demo](docs/portfolio-demo.md) · [CV and interview evidence](docs/cv-evidence.md)
 
-For an optional public CV demo, use the [free VM deployment guide](docs/cv-deployment.md). It runs the API, database, Redis, frontend, and HTTPS on one small host with paid AI disabled.
+For an optional public deployment, use the [free VM deployment guide](docs/deployment.md). It runs the API, database, Redis, frontend, and HTTPS on one small host with paid AI disabled.
 
 ## Overview
 
@@ -130,7 +130,7 @@ New-Item -ItemType Directory -Force .local/mail | Out-Null
 docker compose -f infra/compose.yml -f infra/compose.ci.yml --env-file .env --profile app up --build -d --wait
 ```
 
-The file-mail override is only for loopback development and CI. The [public CV deployment](docs/cv-deployment.md) uses HTTPS and SMTP. Infrastructure only: omit `--profile app`, then run Java/React on the host.
+The file-mail override is only for loopback development and CI. The [public deployment](docs/deployment.md) uses HTTPS and SMTP. Infrastructure only: omit `--profile app`, then run Java/React on the host.
 
 ## Testing
 

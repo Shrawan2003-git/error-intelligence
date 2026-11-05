@@ -29,4 +29,4 @@ The React frontend calls a secured Java 21/Spring Boot API. PostgreSQL stores th
 
 The UI does not automatically collect failures from VS Code or application logs; a service must send events. The local no-cost demo leaves paid AI workers disabled. Hosted email needs SMTP configuration, and public production staging remains a separate release gate.
 
-For a personal CV deployment, use the [free VM deployment guide](../cv-deployment.md) and the [Java sender example](../../examples/java-sender/README.md). A live URL still depends on your own VM, hostname, and SMTP account.
+For a personal portfolio deployment, use the [free VM deployment guide](../deployment.md) and the [Java sender example](../../examples/java-sender/README.md). A live URL still depends on your own VM, hostname, and SMTP account.
