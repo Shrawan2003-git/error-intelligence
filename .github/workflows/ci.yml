@@ -31,7 +31,7 @@ jobs:
       - run: ./mvnw -B -ntp verify
       - name: Record dependency inventory
         run: ./mvnw -B -ntp org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: backend-test-reports
@@ -41,7 +41,7 @@ jobs:
             back-end/target/bom.json
 
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: backend-release-jar
           path: back-end/target/error-intelligence-backend-*.jar
@@ -63,7 +63,7 @@ jobs:
       - name: Require detected Java packages
         if: always()
         run: jq -e '[.Results[]? | select(.Type == "jar") | .Packages[]?] | length > 0' artifact/java-advisories.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: java-advisories
@@ -158,12 +158,12 @@ jobs:
           done
           git rev-parse HEAD > .local/release-evidence/revision.txt
           exit "$scan_status"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: browser-reports
           path: front-end/playwright-report
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: release-security-evidence
