@@ -1,5 +1,5 @@
 # Rebuild the entrypoint helper with a patched Go standard library.
-FROM golang:1.27.2-alpine AS gosu-build
+FROM golang:1.27.3-alpine AS gosu-build
 ADD https://github.com/tianon/gosu.git#1.19 /src
 WORKDIR /src
 RUN CGO_ENABLED=0 go build -trimpath -o /gosu .
