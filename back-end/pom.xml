@@ -23,7 +23,7 @@
     <postgresql.version>42.7.12</postgresql.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <flyway.version>11.20.3</flyway.version>
-    <spotless.version>3.6.0</spotless.version>
+    <spotless.version>3.11.0</spotless.version>
     <integration.prefix></integration.prefix>
     <project.build.outputTimestamp>2026-10-08T00:00:00Z</project.build.outputTimestamp>
   </properties>
